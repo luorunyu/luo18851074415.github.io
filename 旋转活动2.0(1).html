@@ -1,0 +1,654 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平面图形旋转生成立体图形过程演示</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .panel {
+            background: rgba(0, 0, 30, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 300px;
+        }
+        .right-panel {
+            flex: 1; /* 调整为1，让左侧和右侧面板宽度相同 */
+            min-width: 500px;
+        }
+        .panel-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4a9fff;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        select, button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        select:hover, button:hover {
+            background: rgba(74, 159, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        select:focus, button:focus {
+            outline: 2px solid #4a9fff;
+        }
+        button {
+            background: linear-gradient(45deg, #4a9fff, #6a5af9);
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button.reset {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 20, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        canvas {
+            display: block;
+        }
+        .info-panel {
+            background: rgba(0, 20, 40, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .info-panel h3 {
+            margin-bottom: 10px;
+            color: #4a9fff;
+        }
+        .info-panel ul {
+            padding-left: 20px;
+        }
+        .info-panel li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .rotation-axis {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .axis-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .process-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .process-controls button {
+            flex: 1;
+        }
+        .custom-controls {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .stage-info {
+            background: rgba(74, 159, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            .left-panel, .right-panel {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>平面图形旋转生成立体图形过程演示</h1>
+            <p class="subtitle">通过连续动画演示平面图形绕轴旋转逐步生成立体图形的完整过程。原始图形为实形，旋转形成的立体为渐变虚影。</p>
+        </header>
+        <div class="content">
+            <div class="panel left-panel">
+                <h2 class="panel-title">2D图形控制面板</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="shape-select">选择图形:</label>
+                        <select id="shape-select">
+                            <option value="triangle">三角形</option>
+                            <option value="rectangle">长方形</option>
+                            <option value="square">正方形</option>
+                            <option value="circle">圆形</option>
+                            <option value="trapezoid">梯形</option>
+                            <option value="custom">自定义图形</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="rotation-speed">旋转速度:</label>
+                        <select id="rotation-speed">
+                            <option value="0.5">慢速</option>
+                            <option value="1" selected>正常</option>
+                            <option value="2">快速</option>
+                            <option value="3">超快</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 旋转轴选择被移除，默认绕Y轴旋转 -->
+                <div class="process-controls">
+                    <button id="start-btn">开始演示</button>
+                    <button id="pause-btn">暂停</button>
+                    <button id="reset-btn" class="reset">重置</button>
+                </div>
+                <div id="custom-controls" class="custom-controls">
+                    <button id="start-draw-btn">开始绘制</button>
+                    <button id="undo-draw-btn">撤销上一步</button>
+                    <button id="done-draw-btn">完成绘制</button>
+                </div>
+                <div class="stage-info" id="stage-info">
+                    准备阶段: 显示原始平面图形
+                </div>
+                <div class="canvas-container">
+                    <canvas id="canvas-2d"></canvas>
+                </div>
+                <div class="info-panel">
+                    <h3>操作说明</h3>
+                    <ul>
+                        <li>选择不同的平面图形查看旋转过程</li>
+                        <li>调整旋转速度优化演示效果</li>
+                        <li>点击"开始演示"观看连续形成过程</li>
+                        <li>使用"重置"按钮恢复初始状态</li>
+                        <li>选择"自定义图形"可在左侧画布上点击绘制</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel right-panel">
+                <h2 class="panel-title">3D连续形成过程演示</h2>
+                <div class="canvas-container">
+                    <canvas id="canvas-3d"></canvas>
+                </div>
+                <div class="info-panel">
+                    <h3>连续形成过程说明</h3>
+                    <p>当平面图形绕轴旋转时，图形上的每一点都会形成一个圆周轨迹，连续形成完整的立体图形：</p>
+                    <ul>
+                        <li><strong>准备阶段</strong>: 显示原始平面图形（实形，持续旋转）</li>
+                        <li><strong>形成阶段</strong>: 连续旋转形成立体图形（渐变虚影）</li>
+                        <li><strong>完成阶段</strong>: 显示完整的旋转体（透明效果）</li>
+                    </ul>
+                    <p>原始图形始终保持实体并持续旋转，形成的立体图形为透明虚影，便于观察形成过程。</p>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <p>平面图形旋转生成立体图形过程演示 | 连续真实的几何变换演示</p>
+        </footer>
+    </div>
+    <script>
+        // 全局变量
+        let scene, camera, renderer, controls;
+        let currentShape = 'triangle';
+        const rotationAxis = 'y'; // 默认绕Y轴旋转
+        let rotationSpeed = 1;
+        let originalShape, rotationSolid;
+        let animationId;
+        let isAnimating = false;
+        let rotationProgress = 0;
+        let points = [];
+        let continuousRotation = 0;
+        let originalShapeGroup, rotationSolidGroup;
+        // 自定义绘制相关变量
+        let isDrawingMode = false;
+        let customPoints = [];
+        // 初始化2D画布
+        const canvas2d = document.getElementById('canvas-2d');
+        const ctx2d = canvas2d.getContext('2d');
+        const customControls = document.getElementById('custom-controls');
+        // 设置画布尺寸
+        function resizeCanvases() {
+            const container = document.querySelector('.canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            canvas2d.width = width;
+            canvas2d.height = height;
+            if (renderer) {
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            }
+            draw2DShape();
+        }
+        // 绘制2D图形
+        function draw2DShape() {
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            ctx2d.clearRect(0, 0, width, height);
+            // 绘制坐标轴
+            ctx2d.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx2d.lineWidth = 1;
+            ctx2d.beginPath();
+            ctx2d.moveTo(width/2, 0);
+            ctx2d.lineTo(width/2, height);
+            ctx2d.moveTo(0, height/2);
+            ctx2d.lineTo(width, height/2);
+            ctx2d.stroke();
+            // 绘制旋转轴（固定为Y轴）
+            ctx2d.strokeStyle = '#4a9fff';
+            ctx2d.lineWidth = 2;
+            ctx2d.beginPath();
+            ctx2d.moveTo(width/2, 0);
+            ctx2d.lineTo(width/2, height);
+            ctx2d.stroke();
+            // 绘制图形
+            ctx2d.fillStyle = 'rgba(74, 159, 255, 0.7)';
+            ctx2d.strokeStyle = '#4a9fff';
+            ctx2d.lineWidth = 3;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const size = Math.min(width, height) * 0.3;
+            ctx2d.beginPath();
+            if (currentShape === 'custom') {
+                if (customPoints.length > 0) {
+                    ctx2d.moveTo(customPoints[0].x * width / 2 + centerX, -customPoints[0].y * height / 2 + centerY);
+                    for (let i = 1; i < customPoints.length; i++) {
+                        ctx2d.lineTo(customPoints[i].x * width / 2 + centerX, -customPoints[i].y * height / 2 + centerY);
+                    }
+                    if (isDrawingMode) {
+                        // Keep path open for drawing
+                    } else {
+                        ctx2d.closePath();
+                        ctx2d.fill();
+                    }
+                    ctx2d.stroke();
+                    
+                    // 绘制所有点
+                    ctx2d.fillStyle = '#ff4d4d';
+                    for (let i = 0; i < customPoints.length; i++) {
+                        const x = customPoints[i].x * width / 2 + centerX;
+                        const y = -customPoints[i].y * height / 2 + centerY;
+                        ctx2d.beginPath();
+                        ctx2d.arc(x, y, 6, 0, Math.PI * 2);
+                        ctx2d.fill();
+                    }
+                }
+            } else {
+                switch(currentShape) {
+                    case 'triangle':
+                        ctx2d.moveTo(centerX, centerY - size/2);
+                        ctx2d.lineTo(centerX - size/2, centerY + size/2);
+                        ctx2d.lineTo(centerX + size/2, centerY + size/2);
+                        break;
+                    case 'rectangle':
+                        ctx2d.rect(centerX - size/2, centerY - size/3, size, size*2/3);
+                        break;
+                    case 'square':
+                        ctx2d.rect(centerX - size/2, centerY - size/2, size, size);
+                        break;
+                    case 'circle':
+                        ctx2d.arc(centerX, centerY, size/2, 0, Math.PI * 2);
+                        break;
+                    case 'trapezoid':
+                        ctx2d.moveTo(centerX - size/3, centerY - size/2);
+                        ctx2d.lineTo(centerX + size/3, centerY - size/2);
+                        ctx2d.lineTo(centerX + size/4, centerY + size/2);
+                        ctx2d.lineTo(centerX - size/4, centerY + size/2);
+                        break;
+                }
+                ctx2d.closePath();
+                ctx2d.fill();
+                ctx2d.stroke();
+            }
+            // 绘制旋转说明
+            ctx2d.fillStyle = 'white';
+            ctx2d.font = '16px Arial';
+            ctx2d.textAlign = 'center';
+            ctx2d.fillText(`绕Y轴旋转`, width/2, 30);
+        }
+        // 初始化3D场景
+        function init3D() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a2a);
+            scene.fog = new THREE.Fog(0x0a0a2a, 20, 100);
+            // 创建相机
+            const container = document.querySelector('.canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            camera.position.set(0, 0, 5.0); // 调整摄像机位置，使其更远
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('canvas-3d'),
+                antialias: true 
+            });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            const pointLight = new THREE.PointLight(0x4a9fff, 1, 100);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+            // 添加轨道控制器
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            // 添加坐标轴辅助
+            const axesHelper = new THREE.AxesHelper(3);
+            scene.add(axesHelper);
+            // 创建初始图形
+            create3DShape();
+            // 开始渲染循环
+            animate();
+        }
+        // 创建3D图形
+        function create3DShape() {
+            // 移除旧的网格
+            if (originalShapeGroup) {
+                scene.remove(originalShapeGroup);
+                originalShapeGroup.traverse(obj => {
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) obj.material.dispose();
+                });
+            }
+            if (rotationSolidGroup) {
+                scene.remove(rotationSolidGroup);
+                rotationSolidGroup.traverse(obj => {
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) obj.material.dispose();
+                });
+            }
+            // 根据选择创建几何体
+            let shapePoints = [];
+            const baseSize = 1.0; // 缩小所有形状的基础尺寸
+            if (currentShape === 'custom') {
+                if (customPoints.length < 3) {
+                    console.error("需要至少3个点来创建自定义图形。");
+                    return;
+                }
+                // 缩小自定义图形的旋转体
+                const scaleFactor = 6.0;
+                shapePoints = customPoints.map(p => new THREE.Vector2(p.x * scaleFactor, p.y * scaleFactor));
+            } else {
+                const size = baseSize;
+                switch(currentShape) {
+                    case 'triangle':
+                        shapePoints.push(new THREE.Vector2(0, size));
+                        shapePoints.push(new THREE.Vector2(-size, -size));
+                        shapePoints.push(new THREE.Vector2(size, -size));
+                        break;
+                    case 'rectangle':
+                        shapePoints.push(new THREE.Vector2(size*0.6, -size*0.8));
+                        shapePoints.push(new THREE.Vector2(size*0.6, size*0.8));
+                        shapePoints.push(new THREE.Vector2(-size*0.6, size*0.8));
+                        shapePoints.push(new THREE.Vector2(-size*0.6, -size*0.8));
+                        break;
+                    case 'square':
+                        shapePoints.push(new THREE.Vector2(size, -size));
+                        shapePoints.push(new THREE.Vector2(size, size));
+                        shapePoints.push(new THREE.Vector2(-size, size));
+                        shapePoints.push(new THREE.Vector2(-size, -size));
+                        break;
+                    case 'circle':
+                        for (let i = 0; i <= 20; i++) {
+                            const angle = (i / 20) * Math.PI * 2;
+                            shapePoints.push(new THREE.Vector2(Math.cos(angle) * size, Math.sin(angle) * size));
+                        }
+                        break;
+                    case 'trapezoid':
+                        shapePoints.push(new THREE.Vector2(size*0.5, -size));
+                        shapePoints.push(new THREE.Vector2(size, size));
+                        shapePoints.push(new THREE.Vector2(-size, size));
+                        shapePoints.push(new THREE.Vector2(-size*0.5, -size));
+                        break;
+                }
+            }
+            // 创建原始图形（实形）
+            const originalMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x4a9fff,
+                transparent: false,
+                opacity: 1,
+                shininess: 100,
+                side: THREE.DoubleSide
+            });
+            // 创建完整的旋转体（用于形成过程）
+            const solidMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xff6b6b, // 改为橙红色，更易区分
+                transparent: true,
+                opacity: 0,
+                shininess: 50,
+                wireframe: false, // 恢复实体填充
+                side: THREE.DoubleSide
+            });
+            // LatheGeometry默认绕Y轴旋转
+            const latheGeometry = new THREE.LatheGeometry(shapePoints, 32);
+            const originalGeometry = new THREE.ShapeGeometry(new THREE.Shape(shapePoints));
+            originalShape = new THREE.Mesh(originalGeometry, originalMaterial);
+            rotationSolid = new THREE.Mesh(latheGeometry, solidMaterial);
+            // 将图形放入组中，便于整体旋转
+            originalShapeGroup = new THREE.Group();
+            originalShapeGroup.add(originalShape);
+            scene.add(originalShapeGroup);
+            rotationSolidGroup = new THREE.Group();
+            rotationSolidGroup.add(rotationSolid);
+            scene.add(rotationSolidGroup);
+            // 重置状态
+            rotationProgress = 0;
+            continuousRotation = 0;
+            updateStageInfo();
+        }
+        // 更新阶段信息
+        function updateStageInfo() {
+            if (!isAnimating) {
+                document.getElementById('stage-info').textContent = "准备阶段: 显示原始平面图形";
+            } else if (rotationProgress < 1) {
+                const angle = Math.floor(rotationProgress * 360);
+                document.getElementById('stage-info').textContent = `形成阶段: 已旋转 ${angle}°`;
+            } else {
+                document.getElementById('stage-info').textContent = "完成阶段: 旋转体形成完毕";
+            }
+        }
+        // 动画循环
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            // 持续旋转原始图形
+            continuousRotation += 0.02 * rotationSpeed;
+            originalShapeGroup.rotation.y = continuousRotation;
+            // 形成过程动画
+            if (isAnimating) {
+                rotationProgress += 0.008 * rotationSpeed;
+                if (rotationProgress >= 1) {
+                    rotationProgress = 1;
+                    isAnimating = false;
+                }
+                // 根据进度更新立体图形的透明度
+                const opacity = Math.min(0.4, rotationProgress * 0.4);
+                rotationSolid.material.opacity = opacity;
+                updateStageInfo();
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        // 事件监听器
+        function setupEventListeners() {
+            // 图形选择
+            document.getElementById('shape-select').addEventListener('change', function() {
+                currentShape = this.value;
+                draw2DShape();
+                if (currentShape === 'custom') {
+                    customControls.style.display = 'flex';
+                } else {
+                    customControls.style.display = 'none';
+                    create3DShape();
+                }
+            });
+            // 旋转速度
+            document.getElementById('rotation-speed').addEventListener('change', function() {
+                rotationSpeed = parseFloat(this.value);
+            });
+            // 开始按钮
+            document.getElementById('start-btn').addEventListener('click', function() {
+                if (currentShape === 'custom' && customPoints.length < 3) {
+                    alert("请至少绘制3个点来创建自定义图形。");
+                    return;
+                }
+                isAnimating = true;
+                rotationProgress = 0;
+                rotationSolid.material.opacity = 0;
+            });
+            // 暂停按钮
+            document.getElementById('pause-btn').addEventListener('click', function() {
+                isAnimating = false;
+            });
+            // 重置按钮
+            document.getElementById('reset-btn').addEventListener('click', function() {
+                currentShape = 'triangle';
+                rotationSpeed = 1;
+                isDrawingMode = false;
+                customPoints = [];
+                document.getElementById('shape-select').value = 'triangle';
+                document.getElementById('rotation-speed').value = '1';
+                customControls.style.display = 'none';
+                draw2DShape();
+                create3DShape();
+                isAnimating = false;
+                rotationProgress = 0;
+                updateStageInfo();
+            });
+            // 开始绘制按钮
+            document.getElementById('start-draw-btn').addEventListener('click', function() {
+                isDrawingMode = true;
+                customPoints = [];
+                draw2DShape();
+            });
+            // 撤销上一步按钮
+            document.getElementById('undo-draw-btn').addEventListener('click', function() {
+                if (isDrawingMode && customPoints.length > 0) {
+                    customPoints.pop();
+                    draw2DShape();
+                }
+            });
+            // 完成绘制按钮
+            document.getElementById('done-draw-btn').addEventListener('click', function() {
+                isDrawingMode = false;
+                draw2DShape();
+                if (customPoints.length >= 3) {
+                    create3DShape();
+                } else {
+                    alert("自定义图形至少需要3个点。");
+                }
+            });
+            // 2D画布点击事件
+            canvas2d.addEventListener('click', function(event) {
+                if (isDrawingMode) {
+                    const rect = canvas2d.getBoundingClientRect();
+                    const x = event.clientX - rect.left - canvas2d.width / 2;
+                    const y = event.clientY - rect.top - canvas2d.height / 2;
+                    const normalizedX = x / (canvas2d.width / 2);
+                    const normalizedY = -y / (canvas2d.height / 2);
+                    customPoints.push(new THREE.Vector2(normalizedX, normalizedY));
+                    draw2DShape();
+                }
+            });
+            // 窗口大小调整
+            window.addEventListener('resize', resizeCanvases);
+        }
+        // 初始化应用
+        function init() {
+            resizeCanvases();
+            draw2DShape();
+            init3D();
+            setupEventListeners();
+        }
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+```
